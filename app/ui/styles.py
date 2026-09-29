@@ -45,6 +45,11 @@ QLabel#appSubtitle {{
     font-size: 12px;
 }}
 
+QLabel#logoBadge {{
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 14px;
+}}
+
 QFrame[class="card"] {{
     background: {COLORS['card']};
     border: 1px solid {COLORS['border']};
@@ -199,14 +204,22 @@ QHeaderView::section {{
 }}
 
 QFrame#footerBar {{
-    background: {COLORS['card']};
-    border: 1px solid {COLORS['border']};
+    background: {GRADIENT_HEADER};
+    border: none;
     border-radius: 10px;
 }}
 
 QLabel#footerText {{
-    color: {COLORS['text']};
+    color: rgba(255, 255, 255, 0.95);
     font-size: 12px;
+    font-weight: 500;
+}}
+
+QLabel#creditText {{
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+    font-style: italic;
+    font-weight: 500;
 }}
 
 QLabel#statusText {{

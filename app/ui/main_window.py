@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -31,6 +31,8 @@ from PySide6.QtWidgets import (
 from ..core.compressor import FileResult
 from ..core.worker import CompressionWorker
 from .styles import COLORS, STYLESHEET
+
+ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 
 STATUS_COLORS = {
     "ok": COLORS["success"],
@@ -129,9 +131,18 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(header)
         layout.setContentsMargins(24, 0, 24, 0)
 
-        icon_lbl = QLabel("📄")
-        icon_lbl.setStyleSheet("font-size: 30px;")
-        layout.addWidget(icon_lbl)
+        logo_lbl = QLabel()
+        logo_lbl.setObjectName("logoBadge")
+        logo_lbl.setFixedSize(52, 52)
+        logo_lbl.setAlignment(Qt.AlignCenter)
+        logo_path = ASSETS_DIR / "logo.jpg"
+        if logo_path.exists():
+            pixmap = QPixmap(str(logo_path)).scaled(
+                40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            logo_lbl.setPixmap(pixmap)
+        layout.addWidget(logo_lbl)
+        layout.addSpacing(12)
 
         text_box = QVBoxLayout()
         text_box.setSpacing(2)
@@ -262,6 +273,9 @@ class MainWindow(QMainWindow):
         self.footer_label.setObjectName("footerText")
         layout.addWidget(self.footer_label)
         layout.addStretch(1)
+        credit_label = QLabel("Design by Huy Đỗ")
+        credit_label.setObjectName("creditText")
+        layout.addWidget(credit_label)
         return footer
 
     # ------------------------------------------------------------- actions
