@@ -343,6 +343,14 @@ class MainWindow(QMainWindow):
         if directory:
             self.dest_edit.setText(directory)
 
+    def _show_detailed_warning(self, title: str, summary: str, detail: str, icon=QMessageBox.Warning):
+        box = QMessageBox(self)
+        box.setIcon(icon)
+        box.setWindowTitle(title)
+        box.setText(summary)
+        box.setInformativeText(detail)
+        box.exec()
+
     def _on_overwrite_toggled(self, _state):
         overwrite = self.overwrite_check.isChecked()
         self.dest_edit.setEnabled(not overwrite)
@@ -361,11 +369,21 @@ class MainWindow(QMainWindow):
     def start_processing(self):
         source_text = self.source_edit.text().strip()
         if not source_text:
-            QMessageBox.warning(self, "Thiếu thông tin", "Vui lòng chọn thư mục nguồn chứa file PDF.")
+            self._show_detailed_warning(
+                "Thiếu thư mục nguồn",
+                "Chưa chọn thư mục nguồn chứa file PDF.",
+                "Bấm nút 'Chọn thư mục...' ở mục 1 để chọn thư mục (hoặc cả ổ đĩa) "
+                "chứa các file PDF cần nén.",
+            )
             return
         source_dir = Path(source_text)
         if not source_dir.is_dir():
-            QMessageBox.warning(self, "Thư mục không hợp lệ", "Thư mục nguồn không tồn tại.")
+            self._show_detailed_warning(
+                "Thư mục nguồn không hợp lệ",
+                f"Không tìm thấy thư mục:\n{source_dir}",
+                "Thư mục có thể đã bị xoá, đổi tên, hoặc nằm trên ổ đĩa/máy khác hiện "
+                "không còn kết nối. Vui lòng bấm 'Chọn thư mục...' để chọn lại.",
+            )
             return
 
         overwrite = self.overwrite_check.isChecked()
@@ -385,13 +403,26 @@ class MainWindow(QMainWindow):
         else:
             dest_text = self.dest_edit.text().strip()
             if not dest_text:
-                QMessageBox.warning(self, "Thiếu thông tin", "Vui lòng chọn thư mục đích để lưu file đã nén.")
+                self._show_detailed_warning(
+                    "Thiếu thư mục đích",
+                    "Chưa chọn thư mục đích để lưu file PDF đã nén.",
+                    "Vì ô 'Ghi đè trực tiếp lên file gốc' đang KHÔNG được tích, ứng dụng "
+                    "cần một thư mục riêng để lưu kết quả. Cách khắc phục — chọn 1 trong 2:\n\n"
+                    "• Bấm nút 'Chọn...' cạnh ô 'Thư mục đích lưu file' để chọn nơi lưu, hoặc\n"
+                    "• Tích vào 'Ghi đè trực tiếp lên file gốc' để nén thẳng vào file gốc "
+                    "(sẽ có xác nhận riêng vì không thể hoàn tác).",
+                )
                 return
             dest_dir = Path(dest_text)
             try:
                 dest_dir.mkdir(parents=True, exist_ok=True)
             except Exception as exc:  # noqa: BLE001
-                QMessageBox.critical(self, "Lỗi", f"Không tạo được thư mục đích: {exc}")
+                self._show_detailed_warning(
+                    "Không tạo được thư mục đích",
+                    f"Không tạo được thư mục đích:\n{dest_dir}",
+                    f"Chi tiết lỗi: {exc}\n\nKiểm tra quyền ghi hoặc chọn một thư mục đích khác.",
+                    icon=QMessageBox.Critical,
+                )
                 return
 
         max_kb = float(self.limit_spin.value())
