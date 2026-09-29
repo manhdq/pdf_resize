@@ -17,9 +17,11 @@ jobs:
           - os: windows-latest
             artifact_name: pdf-page-compressor-windows
             icon: assets/icon.ico
+            data_sep: ";"
           - os: ubuntu-latest
             artifact_name: pdf-page-compressor-linux
             icon: assets/icon.png
+            data_sep: ":"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +50,7 @@ jobs:
           pyinstaller --onefile --windowed --clean
           --name pdf-page-compressor
           --icon ${{ matrix.icon }}
+          --add-data "assets${{ matrix.data_sep }}assets"
           run.py
 
       - name: Upload build artifact

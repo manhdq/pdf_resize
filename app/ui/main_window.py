@@ -30,9 +30,8 @@ from PySide6.QtWidgets import (
 
 from ..core.compressor import FileResult
 from ..core.worker import CompressionWorker, FolderScanWorker
+from ..paths import ASSETS_DIR
 from .styles import COLORS, STYLESHEET
-
-ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 
 STATUS_COLORS = {
     "ok": COLORS["success"],

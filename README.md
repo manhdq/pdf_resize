@@ -31,9 +31,15 @@ Build cục bộ bằng PyInstaller:
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.ico run.py   # Windows
-pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.png run.py    # Linux
+
+# Windows (chạy trong PowerShell/cmd trên máy Windows, dùng ";" giữa 2 nửa --add-data)
+pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.ico --add-data "assets;assets" run.py
+
+# Linux (dùng ":" giữa 2 nửa --add-data)
+pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.png --add-data "assets:assets" run.py
 ```
+
+`--add-data` bắt buộc phải có — nếu thiếu, ứng dụng đóng gói sẽ chạy được nhưng **thiếu logo** ở góc trên (thư mục `assets/` không được nhúng vào file thực thi).
 
 File thực thi nằm trong `dist/`.
 
