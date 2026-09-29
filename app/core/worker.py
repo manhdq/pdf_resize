@@ -11,6 +11,26 @@ from .compressor import FileResult, compress_pdf_file
 from .scanner import find_pdf_files
 
 
+class FolderScanWorker(QThread):
+    """Lightweight background scan used to preview a folder's PDFs before
+    the user presses Start — just lists files, no compression."""
+
+    scan_done = Signal(list)  # list of str paths found
+    scan_failed = Signal(str)
+
+    def __init__(self, source_dir: Path, parent=None):
+        super().__init__(parent)
+        self.source_dir = Path(source_dir)
+
+    def run(self):
+        try:
+            files = find_pdf_files(self.source_dir)
+        except Exception as exc:  # noqa: BLE001
+            self.scan_failed.emit(f"Không quét được thư mục: {exc}")
+            return
+        self.scan_done.emit([str(p) for p in files])
+
+
 class CompressionWorker(QThread):
     scan_finished = Signal(list)  # list of str paths found, in processing order
     file_started = Signal(str, int, int)  # path, index (1-based), total

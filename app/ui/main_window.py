@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..core.compressor import FileResult
-from ..core.worker import CompressionWorker
+from ..core.worker import CompressionWorker, FolderScanWorker
 from .styles import COLORS, STYLESHEET
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
@@ -45,7 +45,7 @@ STATUS_COLORS = {
 }
 
 STATUS_LABELS = {
-    "pending": "Đang chờ...",
+    "pending": "Đang chờ xử lý...",
     "processing": "Đang xử lý...",
 }
 
@@ -94,6 +94,9 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(980, 620)
 
         self.worker: Optional[CompressionWorker] = None
+        self.preview_worker: Optional[FolderScanWorker] = None
+        self._scan_token = 0
+        self._source_dir: Optional[Path] = None
         self.folder_items: Dict[str, QTreeWidgetItem] = {}
         self.folder_stats: Dict[str, dict] = {}
         self.file_items: Dict[str, QTreeWidgetItem] = {}
@@ -169,6 +172,7 @@ class MainWindow(QMainWindow):
         self.source_edit.setReadOnly(True)
         src_btn = QPushButton("📁 Chọn thư mục...")
         src_btn.clicked.connect(self.browse_source)
+        self.source_btn = src_btn
         src_row.addWidget(self.source_edit, stretch=1)
         src_row.addWidget(src_btn)
         src_layout.addLayout(src_row)
@@ -284,7 +288,55 @@ class MainWindow(QMainWindow):
         directory = QFileDialog.getExistingDirectory(self, "Chọn thư mục nguồn", self.source_edit.text() or str(Path.home()))
         if directory:
             self.source_edit.setText(directory)
-            self.status_label.setText("Sẵn sàng xử lý. Nhấn 'Bắt đầu xử lý' để quét và nén PDF.")
+            self._preview_scan(directory)
+
+    def _preview_scan(self, directory: str):
+        self._reset_results()
+        self._source_dir = Path(directory)
+        self._scan_token += 1
+        token = self._scan_token
+
+        self.status_label.setText("Đang quét thư mục nguồn...")
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setFormat("Đang quét...")
+
+        if self.preview_worker is not None and self.preview_worker.isRunning():
+            # A previous scan (e.g. the user picked another folder quickly)
+            # is still running. Detach it from the UI and let it clean
+            # itself up once done instead of blocking or killing it.
+            self.preview_worker.scan_done.disconnect()
+            self.preview_worker.scan_failed.disconnect()
+            self.preview_worker.finished.connect(self.preview_worker.deleteLater)
+
+        self.preview_worker = FolderScanWorker(self._source_dir, parent=self)
+        self.preview_worker.scan_done.connect(lambda paths: self._on_preview_scan_done(token, paths))
+        self.preview_worker.scan_failed.connect(lambda msg: self._on_preview_scan_failed(token, msg))
+        self.preview_worker.start()
+
+    def _on_preview_scan_done(self, token: int, paths):
+        if token != self._scan_token:
+            return  # a newer folder selection superseded this scan
+        total = len(paths)
+        if total == 0:
+            self.progress_bar.setRange(0, 1)
+            self.progress_bar.setValue(0)
+            self.progress_bar.setFormat("Không có file")
+            self.status_label.setText("Không tìm thấy file PDF nào trong thư mục đã chọn.")
+            return
+
+        self._populate_skeleton(paths)
+        self.progress_bar.setRange(0, total)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat(f"0/{total}")
+        self.status_label.setText(f"Tìm thấy {total} file PDF. Nhấn 'Bắt đầu xử lý' để nén.")
+
+    def _on_preview_scan_failed(self, token: int, message: str):
+        if token != self._scan_token:
+            return
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("Lỗi quét")
+        self.status_label.setText(message)
 
     def browse_dest(self):
         directory = QFileDialog.getExistingDirectory(self, "Chọn thư mục đích", self.dest_edit.text() or str(Path.home()))
@@ -300,6 +352,7 @@ class MainWindow(QMainWindow):
         self.start_btn.setEnabled(not running)
         self.stop_btn.setEnabled(running)
         self.source_edit.setEnabled(not running)
+        self.source_btn.setEnabled(not running)
         self.dest_edit.setEnabled(not running and not self.overwrite_check.isChecked())
         self.dest_btn.setEnabled(not running and not self.overwrite_check.isChecked())
         self.overwrite_check.setEnabled(not running)
@@ -394,7 +447,26 @@ class MainWindow(QMainWindow):
         self.folder_stats[key] = {"orig": 0, "comp": 0, "total": 0, "done": 0}
         return item
 
+    def _populate_skeleton(self, paths):
+        """Build the folder/file tree rows in a 'pending' state, without
+        touching the progress bar or status text (callers decide those)."""
+        for p in paths:
+            key = self._folder_key(p)
+            folder_item = self._folder_item(key)
+            self.folder_stats[key]["total"] += 1
+            name = Path(p).name
+            child = QTreeWidgetItem(["   📄 " + name, "-", "-", "-", "-", "-", "-", STATUS_LABELS["pending"]])
+            child.setForeground(7, QColor(STATUS_COLORS["pending"]))
+            folder_item.addChild(child)
+            self.file_items[p] = child
+
     def on_scan_finished(self, paths):
+        # Emitted by the real CompressionWorker once processing has started.
+        # If the preview scan already built the tree for this exact folder,
+        # skip re-building it so in-progress rows aren't wiped.
+        if not self.file_items:
+            self._populate_skeleton(paths)
+
         total = len(paths)
         if total == 0:
             self.progress_bar.setRange(0, 1)
@@ -407,16 +479,6 @@ class MainWindow(QMainWindow):
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat(f"0/{total}")
         self.status_label.setText(f"Tìm thấy {total} file PDF. Đang xử lý...")
-
-        for p in paths:
-            key = self._folder_key(p)
-            folder_item = self._folder_item(key)
-            self.folder_stats[key]["total"] += 1
-            name = Path(p).name
-            child = QTreeWidgetItem(["   📄 " + name, "-", "-", "-", "-", "-", "-", STATUS_LABELS["pending"]])
-            child.setForeground(7, QColor(STATUS_COLORS["pending"]))
-            folder_item.addChild(child)
-            self.file_items[p] = child
 
     def on_file_started(self, path, idx, total):
         item = self.file_items.get(path)
@@ -506,4 +568,6 @@ class MainWindow(QMainWindow):
         if self.worker is not None and self.worker.isRunning():
             self.worker.cancel()
             self.worker.wait(3000)
+        if self.preview_worker is not None and self.preview_worker.isRunning():
+            self.preview_worker.wait(3000)
         event.accept()
