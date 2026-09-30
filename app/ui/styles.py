@@ -16,8 +16,6 @@ COLORS = {
     "muted_bg": "#EEF1F8",
 }
 
-GRADIENT_HEADER = f"qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4457F0, stop:1 #7C5CFC)"
-
 STYLESHEET = f"""
 * {{
     font-family: "Segoe UI", "Inter", "Noto Sans", "Ubuntu", sans-serif;
@@ -30,7 +28,6 @@ QMainWindow, QWidget#centralWidget {{
 }}
 
 QFrame#headerBar {{
-    background: {GRADIENT_HEADER};
     border: none;
 }}
 
@@ -204,7 +201,6 @@ QHeaderView::section {{
 }}
 
 QFrame#footerBar {{
-    background: {GRADIENT_HEADER};
     border: none;
     border-radius: 10px;
 }}
@@ -216,10 +212,9 @@ QLabel#footerText {{
 }}
 
 QLabel#creditText {{
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 11px;
-    font-style: italic;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.98);
+    font-size: 12px;
+    font-weight: 800;
 }}
 
 QLabel#statusText {{

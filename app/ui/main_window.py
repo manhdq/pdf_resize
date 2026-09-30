@@ -32,6 +32,7 @@ from ..core.compressor import FileResult
 from ..core.worker import CompressionWorker, FolderScanWorker
 from ..paths import ASSETS_DIR
 from .styles import COLORS, STYLESHEET
+from .watermark import GradientBar
 
 STATUS_COLORS = {
     "ok": COLORS["success"],
@@ -127,7 +128,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ UI
 
     def _build_header(self) -> QFrame:
-        header = QFrame()
+        header = GradientBar(motifs=["star", "lotus", "party"])
         header.setObjectName("headerBar")
         header.setFixedHeight(84)
         layout = QHBoxLayout(header)
@@ -268,7 +269,7 @@ class MainWindow(QMainWindow):
         return card
 
     def _build_footer(self) -> QFrame:
-        footer = QFrame()
+        footer = GradientBar(motifs=["star", "party"], corner_radius=10, align="center")
         footer.setObjectName("footerBar")
         layout = QHBoxLayout(footer)
         layout.setContentsMargins(16, 10, 16, 10)
