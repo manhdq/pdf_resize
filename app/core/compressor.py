@@ -44,6 +44,7 @@ class PageResult:
     quality: int
     size_bytes: int
     met_target: bool
+    kept_original: bool = False
 
 
 @dataclass
@@ -77,7 +78,9 @@ class FileResult:
     def dpi_summary(self) -> str:
         if not self.pages:
             return "-"
-        dpis = sorted({p.dpi for p in self.pages})
+        dpis = sorted({p.dpi for p in self.pages if not p.kept_original})
+        if not dpis:
+            return "Gốc"
         if len(dpis) == 1:
             return str(dpis[0])
         return f"{dpis[-1]}-{dpis[0]}"
@@ -123,6 +126,17 @@ def _best_quality_for_dpi(img: Image.Image, target_bytes: int):
         else:
             hi = mid - 1
     return best_data, best_q, True
+
+
+def _standalone_page_bytes(src: "fitz.Document", index: int) -> int:
+    """Approximate how large this one page is on its own, so pages that are
+    already under the target budget (e.g. mostly text, or a small embedded
+    image) can be left untouched instead of being rasterized unnecessarily."""
+    tmp_doc = fitz.open()
+    tmp_doc.insert_pdf(src, from_page=index, to_page=index)
+    size = len(tmp_doc.tobytes(garbage=4, deflate=True))
+    tmp_doc.close()
+    return size
 
 
 def _compress_page(page: "fitz.Page", target_bytes: int, dpi_ladder: List[int]):
@@ -192,13 +206,22 @@ def compress_pdf_file(
             if cancel_check and cancel_check():
                 raise Cancelled()
 
-            page = src.load_page(i)
-            rect = page.rect
-            data, dpi, quality, met = _compress_page(page, target_bytes, dpi_ladder)
-            result.pages.append(PageResult(index=i, dpi=dpi, quality=quality, size_bytes=len(data), met_target=met))
+            orig_page_bytes = _standalone_page_bytes(src, i)
+            if orig_page_bytes <= target_bytes:
+                # Already within budget: keep the page as-is instead of
+                # rasterizing/re-encoding it (avoids needless quality loss).
+                out_doc.insert_pdf(src, from_page=i, to_page=i)
+                result.pages.append(
+                    PageResult(index=i, dpi=0, quality=0, size_bytes=orig_page_bytes, met_target=True, kept_original=True)
+                )
+            else:
+                page = src.load_page(i)
+                rect = page.rect
+                data, dpi, quality, met = _compress_page(page, target_bytes, dpi_ladder)
+                result.pages.append(PageResult(index=i, dpi=dpi, quality=quality, size_bytes=len(data), met_target=met))
 
-            new_page = out_doc.new_page(width=rect.width, height=rect.height)
-            new_page.insert_image(rect, stream=data)
+                new_page = out_doc.new_page(width=rect.width, height=rect.height)
+                new_page.insert_image(rect, stream=data)
 
             if page_progress_cb:
                 page_progress_cb(i + 1, page_count)
