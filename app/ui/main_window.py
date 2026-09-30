@@ -425,6 +425,20 @@ class MainWindow(QMainWindow):
                 )
                 return
 
+        selected_paths: Optional[set] = None
+        if self.file_items:
+            selected_paths = {
+                p for p, item in self.file_items.items() if item.checkState(0) == Qt.Checked
+            }
+            if not selected_paths:
+                self._show_detailed_warning(
+                    "Chưa chọn file nào",
+                    "Không có file PDF nào được tích chọn để xử lý.",
+                    "Tích chọn ít nhất 1 file trong bảng ở mục 3, hoặc tích vào ô của "
+                    "thư mục gốc để chọn toàn bộ.",
+                )
+                return
+
         max_kb = float(self.limit_spin.value())
 
         self._reset_results()
@@ -433,7 +447,7 @@ class MainWindow(QMainWindow):
         self.progress_bar.setRange(0, 0)
         self.progress_bar.setFormat("Đang quét...")
 
-        self.worker = CompressionWorker(source_dir, dest_dir, max_kb, overwrite)
+        self.worker = CompressionWorker(source_dir, dest_dir, max_kb, overwrite, selected_paths=selected_paths)
         self._source_dir = source_dir
         self.worker.scan_finished.connect(self.on_scan_finished)
         self.worker.file_started.connect(self.on_file_started)
@@ -472,6 +486,8 @@ class MainWindow(QMainWindow):
         font = item.font(0)
         font.setBold(True)
         item.setFont(0, font)
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsAutoTristate)
+        item.setCheckState(0, Qt.Checked)
         self.tree.addTopLevelItem(item)
         item.setExpanded(True)
         self.folder_items[key] = item
@@ -488,6 +504,8 @@ class MainWindow(QMainWindow):
             name = Path(p).name
             child = QTreeWidgetItem(["   📄 " + name, "-", "-", "-", "-", "-", "-", STATUS_LABELS["pending"]])
             child.setForeground(7, QColor(STATUS_COLORS["pending"]))
+            child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
+            child.setCheckState(0, Qt.Checked)
             folder_item.addChild(child)
             self.file_items[p] = child
 

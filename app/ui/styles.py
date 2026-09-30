@@ -1,5 +1,10 @@
 """Modern flat theme (QSS) for the PDF page-size compressor."""
 
+from ..paths import ASSETS_DIR
+
+_CHECK_ON = (ASSETS_DIR / "check_on.png").as_posix()
+_CHECK_PARTIAL = (ASSETS_DIR / "check_partial.png").as_posix()
+
 COLORS = {
     "bg": "#F3F5FB",
     "card": "#FFFFFF",
@@ -144,17 +149,22 @@ QCheckBox {{
     spacing: 8px;
 }}
 
-QCheckBox::indicator {{
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+QCheckBox::indicator, QTreeView::indicator {{
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
     border: 1px solid {COLORS['border']};
     background: {COLORS['card']};
 }}
 
-QCheckBox::indicator:checked {{
-    background: {COLORS['primary']};
-    border: 1px solid {COLORS['primary']};
+QCheckBox::indicator:checked, QTreeView::indicator:checked {{
+    image: url({_CHECK_ON});
+    border: 1px solid {COLORS['success']};
+}}
+
+QCheckBox::indicator:indeterminate, QTreeView::indicator:indeterminate {{
+    image: url({_CHECK_PARTIAL});
+    border: 1px solid {COLORS['success']};
 }}
 
 QProgressBar {{

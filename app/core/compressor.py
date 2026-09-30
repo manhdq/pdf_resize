@@ -28,6 +28,10 @@ from PIL import Image
 # Descending ladder of render resolutions (dots-per-inch) to try.
 DPI_LADDER: List[int] = [300, 220, 170, 130, 100, 85, 72]
 
+# If the target still isn't met after DPI_LADDER, keep shrinking below its
+# last (lowest) step rather than giving up, down to this absolute floor.
+MIN_DPI = 8
+
 # JPEG quality bounds used during the binary search at each DPI step.
 QUALITY_MIN = 25
 QUALITY_MAX = 90
@@ -139,14 +143,34 @@ def _standalone_page_bytes(src: "fitz.Document", index: int) -> int:
     return size
 
 
+def _dpi_sequence(dpi_ladder: List[int]):
+    """Yield dpi_ladder's steps, then keep shrinking below its lowest step
+    (down to MIN_DPI) so a very small target size can still be reached
+    instead of giving up once the fixed ladder is exhausted."""
+    seen = set()
+    for dpi in dpi_ladder:
+        if dpi not in seen:
+            seen.add(dpi)
+            yield dpi
+    dpi = min(dpi_ladder) if dpi_ladder else 72
+    while dpi > MIN_DPI:
+        dpi = max(MIN_DPI, int(dpi * 0.75))
+        if dpi in seen:
+            break
+        seen.add(dpi)
+        yield dpi
+
+
 def _compress_page(page: "fitz.Page", target_bytes: int, dpi_ladder: List[int]):
     fallback = None
-    for dpi in dpi_ladder:
+    for dpi in _dpi_sequence(dpi_ladder):
         img = _render_page_rgb(page, dpi)
         data, quality, met = _best_quality_for_dpi(img, target_bytes)
         if met:
             return data, dpi, quality, True
         fallback = (data, dpi, quality)
+        if dpi <= MIN_DPI:
+            break
     data, dpi, quality = fallback
     return data, dpi, quality, False
 

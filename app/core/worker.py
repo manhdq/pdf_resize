@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Set
 
 from PySide6.QtCore import QThread, Signal
 
@@ -45,6 +45,7 @@ class CompressionWorker(QThread):
         dest_dir: Optional[Path],
         max_kb_per_page: float,
         overwrite_in_place: bool,
+        selected_paths: Optional[Set[str]] = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -52,6 +53,7 @@ class CompressionWorker(QThread):
         self.dest_dir = Path(dest_dir) if dest_dir else None
         self.max_kb_per_page = max_kb_per_page
         self.overwrite_in_place = overwrite_in_place
+        self.selected_paths = selected_paths
         self._cancel = False
 
     def cancel(self):
@@ -83,6 +85,20 @@ class CompressionWorker(QThread):
                 break
 
             self.file_started.emit(str(src_path), idx, total)
+
+            if self.selected_paths is not None and str(src_path) not in self.selected_paths:
+                result = FileResult(
+                    input_path=src_path,
+                    output_path=None,
+                    original_bytes=src_path.stat().st_size,
+                    status="skipped",
+                    message="Bỏ qua (không được chọn để xử lý)",
+                )
+                original_total += result.original_bytes
+                compressed_total += result.original_bytes
+                skipped += 1
+                self.file_finished.emit(result)
+                continue
 
             if self.overwrite_in_place or self.dest_dir is None:
                 out_path = src_path
