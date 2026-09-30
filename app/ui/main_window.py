@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ UI
 
     def _build_header(self) -> QFrame:
-        header = GradientBar(motifs=["star", "lotus", "party"])
+        header = GradientBar(motifs=["star", "party"])
         header.setObjectName("headerBar")
         header.setFixedHeight(84)
         layout = QHBoxLayout(header)
