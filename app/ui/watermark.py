@@ -93,14 +93,18 @@ class GradientBar(QFrame):
                 painter.setBrush(QColor(255, 224, 90, 46))
                 painter.drawPath(_star_path(cx, cy, size))
             elif motif == "party":
-                self._draw_party_emblem(painter, cx, cy, size)
+                self._draw_party_emblem(painter, cx, cy, size, rect.height())
         painter.restore()
 
-    def _draw_party_emblem(self, painter: QPainter, cx: float, cy: float, size: float) -> None:
+    def _draw_party_emblem(
+        self, painter: QPainter, cx: float, cy: float, size: float, bar_height: float
+    ) -> None:
         pixmap = _party_emblem_pixmap_cached()
         if pixmap.isNull():
             return
-        target_h = size * 2.1
+        # Cap by bar_height so the emblem never overflows the bar's own clip
+        # region (which would crop its edges instead of shrinking it).
+        target_h = min(size * 1.5, bar_height * 0.8)
         target_w = target_h * pixmap.width() / pixmap.height()
         scaled = pixmap.scaled(
             int(target_w), int(target_h), Qt.KeepAspectRatio, Qt.SmoothTransformation

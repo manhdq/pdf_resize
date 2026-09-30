@@ -216,9 +216,9 @@ QFrame#footerBar {{
 }}
 
 QLabel#footerText {{
-    color: rgba(255, 255, 255, 0.95);
+    color: rgba(255, 255, 255, 0.98);
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 700;
 }}
 
 QLabel#creditText {{
