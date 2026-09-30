@@ -46,8 +46,14 @@ jobs:
           pip install pyinstaller
 
       - name: Build with PyInstaller
+        # --onedir (not --onefile): a onefile build self-extracts its
+        # payload to a temp dir at every launch, which looks like classic
+        # malware-dropper behavior to Windows heuristics (Smart App
+        # Control/SmartScreen) and made unsigned builds get blocked even
+        # though the app itself hadn't changed. --onedir ships a plain
+        # folder instead, avoiding that pattern.
         run: >
-          pyinstaller --onefile --windowed --clean
+          pyinstaller --onedir --windowed --clean
           --name pdf-page-compressor
           --icon ${{ matrix.icon }}
           --add-data "assets${{ matrix.data_sep }}assets"

@@ -33,11 +33,13 @@ Build cục bộ bằng PyInstaller:
 pip install pyinstaller
 
 # Windows (chạy trong PowerShell/cmd trên máy Windows, dùng ";" giữa 2 nửa --add-data)
-pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.ico --add-data "assets;assets" run.py
+pyinstaller --onedir --windowed --name pdf-page-compressor --icon assets/icon.ico --add-data "assets;assets" run.py
 
 # Linux (dùng ":" giữa 2 nửa --add-data)
-pyinstaller --onefile --windowed --name pdf-page-compressor --icon assets/icon.png --add-data "assets:assets" run.py
+pyinstaller --onedir --windowed --name pdf-page-compressor --icon assets/icon.png --add-data "assets:assets" run.py
 ```
+
+Dùng `--onedir` (thư mục) thay vì `--onefile` (1 file .exe duy nhất): bản onefile tự giải nén ra thư mục tạm mỗi lần chạy — hành vi này giống kiểu "dropper" của malware nên dễ bị Windows Smart App Control/SmartScreen chặn dù app không có gì độc hại. `--onedir` xuất ra một thư mục (`dist/pdf-page-compressor/`) chứa file `.exe` cùng các thư viện đi kèm — người dùng chạy file `.exe` trong đó, không cần giải nén khi khởi động.
 
 `--add-data` bắt buộc phải có — nếu thiếu, ứng dụng đóng gói sẽ chạy được nhưng **thiếu logo** ở góc trên (thư mục `assets/` không được nhúng vào file thực thi).
 
